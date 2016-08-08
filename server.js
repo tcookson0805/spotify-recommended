@@ -54,13 +54,41 @@ app.get('/search/:name', function(req, res){
   //    the object and returns it in a response 
   
   searchReq.on('end', function(item){
+    
     var artist = item.artists.items[0];
     
     var searchRelated = getFromApi('artists/' + artist.id + '/related-artists', {});
     
     searchRelated.on('end', function(relatedObj){
       artist.related = relatedObj.artists;
-      res.json(artist);
+      
+      // setting variables to determine when complete
+      var total = artist.related.length;
+      var complete = 0;
+
+      // fn makes call to API to grab top tracks
+      var grabTracks = function(relArtist){
+        var searchTracks = getFromApi('artists/' + relArtist.id + '/top-tracks', {country: 'US'});
+        searchTracks.on('end', function(obj){
+          relArtist.tracks = obj.tracks;
+          console.log(complete);
+          checkComplete();
+        })
+      }
+
+      // fn checks to see if all related artists top tracks are returned
+      var checkComplete = function(){
+        complete += 1;
+        if(total === complete){
+          res.send(artist)
+        }
+      }
+
+      // runs through each rel artist to call grabTracks
+      artist.related.forEach(function(relArtist){ 
+        grabTracks(relArtist);
+      });
+  
     });
   });
   
@@ -76,6 +104,10 @@ app.get('/search/:name', function(req, res){
 app.listen(8080, function(){
   console.log('listening on port: 8080')
 });
+
+
+
+
 
 
 
