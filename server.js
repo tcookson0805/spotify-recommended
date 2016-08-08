@@ -6,9 +6,9 @@ var events = require('events');
   //  1. endpoint name
   //  2. object containing arguments to provide in the query string of the endpoint
 
-var getFromAPI = function(endpoint, args){
+var getFromApi = function(endpoint, args){
   
-  //  First the event emitter is created, which is used to communicate that getting
+  //  First the event emitter is created, which is used to communicate whether getting
   //  the information was either successful or failed
   
   var emitter = new events.EventEmitter();
@@ -27,9 +27,9 @@ var getFromAPI = function(endpoint, args){
         emitter.emit('emit', response.code);
       }
     });
-        
+    
+  return emitter;      
 };
-
 
 //  creation of HTTP server, using node-static to serve the front end
 
@@ -52,23 +52,30 @@ app.get('/search/:name', function(req, res){
   
   //  when end event is emitted, the function is called which then extracts the artist from
   //    the object and returns it in a response 
+  
   searchReq.on('end', function(item){
     var artist = item.artists.items[0];
-    res.json(artist);
+    
+    var searchRelated = getFromApi('artists/' + artist.id + '/related-artists', {});
+    
+    searchRelated.on('end', function(relatedObj){
+      artist.related = relatedObj.artists;
+      res.json(artist);
+    });
   });
   
   searchReq.on('error', function(){
     res.sendStatus(code);
   });
+  
 });
+
+
+
 
 app.listen(8080, function(){
   console.log('listening on port: 8080')
 });
-
-
-
-
 
 
 
